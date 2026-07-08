@@ -7,6 +7,10 @@ import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { peekRateLimit, rateLimit, resetRateLimit } from "@/lib/rate-limit";
+
+// Anti-brute-force : 8 tentatives échouées max par email sur 15 minutes.
+const LOGIN_LIMIT = { name: "login", limit: 8, windowMs: 15 * 60 * 1000 } as const;
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -23,13 +27,21 @@ export const authOptions: NextAuthOptions = {
 
                 const email = credentials.email.trim().toLowerCase();
 
+                // Anti-brute-force : si trop de tentatives échouées récentes, on bloque
+                // AVANT même de vérifier le mot de passe.
+                const peek = peekRateLimit(email, LOGIN_LIMIT);
+                if (!peek.ok) {
+                    throw new Error(`Trop de tentatives de connexion. Réessayez dans ${Math.ceil(peek.retryAfter / 60)} minute(s).`);
+                }
+
                 // Recherche de l'utilisateur en base (admin comme client)
                 const user = await prisma.user.findUnique({
                     where: { email },
                 });
 
                 if (!user || !user.password) {
-                    // Message générique volontaire (ne pas révéler si l'email existe)
+                    // On compte l'échec (protège aussi contre l'énumération d'emails)
+                    rateLimit(email, LOGIN_LIMIT);
                     throw new Error("Email ou mot de passe incorrect");
                 }
 
@@ -43,8 +55,12 @@ export const authOptions: NextAuthOptions = {
                     user.password
                 );
                 if (!isPasswordCorrect) {
+                    rateLimit(email, LOGIN_LIMIT);
                     throw new Error("Email ou mot de passe incorrect");
                 }
+
+                // Connexion réussie : on efface le compteur d'échecs.
+                resetRateLimit(LOGIN_LIMIT.name, email);
 
                 // On ne renvoie JAMAIS l'image Base64 ici (anti-overflow du cookie JWT)
                 return {
