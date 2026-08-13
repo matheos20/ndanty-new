@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model favorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  productId Int
+  createdAt DateTime @default(now())
+  product   product  @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Favorite_productId_fkey")
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Favorite_userId_fkey")
+
+  @@unique([userId, productId], map: "Favorite_userId_productId_key")
+  @@index([productId], map: "Favorite_productId_fkey")
+}
+
+model order {
+  id              Int         @id @default(autoincrement())
+  userId          Int?
+  customerName    String
+  email           String
+  phone           String
+  address         String      @db.Text
+  totalAmount     Float
+  // --- Livraison (Priorité 2) : zone choisie + frais recalculés côté serveur ---
+  deliveryZone    String?
+  deliveryFee     Float       @default(0)
+  status          String      @default("EN_ATTENTE")
+  isReadByManager Boolean     @default(false)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  // --- Module de paiement (Projet FANAKA) ---
+  paymentStatus   String      @default("PENDING") // PENDING | PAID | A_LA_LIVRAISON | FAILED
+  paymentMethod   String?     // MONEGASY | VISA | MASTERCARD | PAYPAL | COD
+  paymentRef      String?     @unique(map: "Order_paymentRef_key") // Jeton public de la page de paiement
+  stockDeducted   Boolean     @default(false) // Garde-fou anti double-décrément
+  user            user?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
+  orderitem       orderitem[]
+  payment         payment?
+
+  @@index([userId], map: "Order_userId_fkey")
+}
+
+model payment {
+  id           Int       @id @default(autoincrement())
+  orderId      Int       @unique(map: "Payment_orderId_key")
+  method       String // MONEGASY | VISA | MASTERCARD | PAYPAL | COD
+  status       String    @default("PENDING") // PENDING | REQUIRES_ACTION | PROCESSING | PAID | FAILED | CANCELLED
+  amount       Float
+  currency     String    @default("MGA")
+  reference    String    @unique(map: "Payment_reference_key") // Référence interne de la transaction (NDT-...)
+  providerRef  String? // Identifiant de transaction renvoyé par la passerelle (simulée)
+  isSandbox    Boolean   @default(true)
+  errorMessage String?   @db.Text
+  metadata     String?   @db.Text // JSON : carte masquée, MSISDN, email PayPal, opérateur...
+  attempts     Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  paidAt       DateTime?
+  order        order     @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "Payment_orderId_fkey")
+}
+
+model orderitem {
+  id        Int      @id @default(autoincrement())
+  orderId   Int
+  productId Int?
+  name      String
+  price     Float
+  quantity  Int
+  order     order    @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "OrderItem_orderId_fkey")
+  product   product? @relation(fields: [productId], references: [id], map: "OrderItem_productId_fkey")
+
+  @@index([orderId], map: "OrderItem_orderId_fkey")
+  @@index([productId], map: "OrderItem_productId_fkey")
+}
+
+model product {
+  id          Int         @id @default(autoincrement())
+  name        String
+  description String      @db.Text
+  price       Float
+  category    String
+  imageUrl    String?     @db.LongText
+  createdAt   DateTime    @default(now())
+  stock       Int         @default(0)
+  updatedAt   DateTime    @updatedAt
+  subcategory String?
+  rating      Decimal?    @default(4.5) @db.Decimal(2, 1)
+  favorite    favorite[]
+  orderitem   orderitem[]
+  review      review[]
+}
+
+model quote {
+  id            Int       @id @default(autoincrement())
+  customerName  String
+  email         String
+  phone         String?
+  details       String    @db.Text
+  dimensions    String?
+  status        String    @default("EN_ATTENTE")
+  createdAt     DateTime  @default(now())
+  imageUrl      String?   @db.LongText
+  proposedPrice     Float?
+  adminResponse     String?   @db.Text
+  proposedAt        DateTime?
+  clientDecision    String?   // Réponse du client à la proposition : "ACCEPTE" ou "REFUSE"
+  clientResponse    String?   @db.Text // Message libre du client
+  clientRespondedAt DateTime?
+  responseToken     String?   @unique(map: "Quote_responseToken_key") // Jeton du lien de réponse par email
+}
+
+model user {
+  id        Int        @id @default(autoincrement())
+  firstName String?
+  lastName  String?
+  email     String     @unique(map: "User_email_key")
+  password  String
+  image     String?    @db.LongText
+  address   String?
+  country   String?
+  role      String     @default("USER")
+  createdAt DateTime   @default(now())
+  // --- Préparation 2FA (Priorité 1 sécurité) : structure prête, activation ultérieure ---
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String? @db.Text
+  favorite  favorite[]
+  order     order[]
+  review      review[]
+}
+
+model review {
+  id           Int       @id @default(autoincrement())
+  rating       Int      // Note de 1 à 5 donnée par le client
+  comment      String    @db.Text // Le texte du commentaire
+  createdAt    DateTime  @default(now())
+  productId    Int
+  userId       Int
+  adminReply   String?   @db.Text // Réponse publique de la boutique Ndanty
+  adminReplyAt DateTime?
+
+  // Relations conformes aux normes de ton schéma actuel
+  product   product  @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Review_productId_fkey")
+  user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Review_userId_fkey")
+
+@@index([productId], map: "Review_productId_fkey")
+@@index([userId], map: "Review_userId_fkey")
+}
