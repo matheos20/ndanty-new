@@ -16,9 +16,9 @@ export default function AuthClientPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6">
             {/* Carte blanche centrée — même style que la modale */}
-            <div className={`w-full ${isLogin ? 'max-w-md' : 'max-w-lg'} bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-50 p-8 transition-all`}>
+            <div className={`w-full ${isLogin ? 'max-w-md' : 'max-w-lg'} bg-white rounded-[2rem] shadow-2xl shadow-gray-200/50 border border-gray-50 p-5 sm:p-8 transition-all`}>
 
                 {/* Logo */}
                 <div className="text-center mb-6">

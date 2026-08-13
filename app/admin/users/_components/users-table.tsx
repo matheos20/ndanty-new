@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { User, MapPin, Shield, Calendar, MoreVertical, Edit2, Trash2, Ban, X, Check } from 'lucide-react';
-import { deleteUserAction, toggleSuspendUserAction, updateUserAction } from '../actions';
+import { User, MapPin, Shield, Calendar, MoreVertical, Edit2, Trash2, Ban, X, Check, IdCard, KeyRound, Eye, EyeOff } from 'lucide-react';
+import PasswordStrength from '@/components/auth/PasswordStrength';
+import { deleteUserAction, toggleSuspendUserAction, updateUserAction, resetUserPasswordAction } from '../actions';
+import CustomerDetailModal from './customer-detail-modal';
 
 interface UserData {
     id: number;
@@ -27,6 +29,15 @@ export default function UsersTable({ users }: UsersTableProps) {
     // États pour la modale d'édition
     const [editingUser, setEditingUser] = useState<UserData | null>(null);
     const [editForm, setEditForm] = useState({ firstName: '', lastName: '', email: '', role: '' });
+    const [editError, setEditError] = useState<string | null>(null);
+
+    // Réinitialisation de mot de passe, repliée par défaut dans la modale d'édition.
+    const [newPassword, setNewPassword] = useState('');
+    const [showPasswordBlock, setShowPasswordBlock] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Fiche client 360° ouverte au clic sur une ligne.
+    const [viewingUserId, setViewingUserId] = useState<number | null>(null);
 
     const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -46,6 +57,10 @@ export default function UsersTable({ users }: UsersTableProps) {
     const handleOpenEditModal = (user: UserData) => {
         setOpenMenuId(null);
         setEditingUser(user);
+        setEditError(null);
+        setNewPassword('');
+        setShowPasswordBlock(false);
+        setShowPassword(false);
         setEditForm({
             firstName: user.firstName ?? '',
             lastName: user.lastName ?? '',
@@ -59,15 +74,35 @@ export default function UsersTable({ users }: UsersTableProps) {
         e.preventDefault();
         if (!editingUser) return;
         setIsPending(true);
+        setEditError(null);
 
         const res = await updateUserAction(editingUser.id, editForm);
-        setIsPending(false);
 
+        // Le mot de passe n'est réécrit que si l'administrateur en a saisi un :
+        // enregistrer la fiche ne doit jamais couper l'accès du titulaire.
+        if (res.success && newPassword.trim()) {
+            const pw = await resetUserPasswordAction(editingUser.id, newPassword);
+            setIsPending(false);
+            if (!pw.success) {
+                setEditError(pw.error || "Le mot de passe n'a pas pu être réinitialisé.");
+                return;
+            }
+            setEditingUser(null);
+            return;
+        }
+
+        setIsPending(false);
         if (res.success) {
             setEditingUser(null);
         } else {
-            alert(res.error);
+            setEditError(res.error || "Erreur lors de la mise à jour.");
         }
+    };
+
+    // Ouvrir la fiche client 360°
+    const handleOpenProfile = (id: number) => {
+        setOpenMenuId(null);
+        setViewingUserId(id);
     };
 
     // Suspendre dynamiquement
@@ -96,33 +131,40 @@ export default function UsersTable({ users }: UsersTableProps) {
     return (
         <div className={`w-full overflow-hidden bg-white rounded-t-2xl border border-gray-100 shadow-sm transition-opacity ${isPending ? 'opacity-60 pointer-events-none' : ''}`}>
             <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse">
+                <table className="w-full min-w-[720px] text-left border-collapse">
                     <thead>
                     <tr className="bg-gray-50/70 border-b border-gray-100">
                         <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Utilisateur</th>
                         <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rôle</th>
                         <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Localisation</th>
-                        <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date d'inscription</th>
+                        <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Date d&apos;inscription</th>
                         <th className="p-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest text-right">Actions</th>
                     </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                     {users.map((user) => (
                         <tr key={user.id} className="hover:bg-gray-50/50 transition-colors group">
-                            <td className="p-5 flex items-center gap-4">
-                                <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center shadow-sm shrink-0">
-                                    {user.image ? (
-                                        <img src={user.image} alt={user.firstName ?? ''} className="w-full h-full object-cover" />
-                                    ) : (
-                                        <User size={18} className="text-gray-400" />
-                                    )}
-                                </div>
-                                <div className="flex flex-col">
+                            <td className="p-5">
+                                {/* Le nom ouvre la fiche 360° : le geste attendu sur une ligne de client. */}
+                                <button
+                                    onClick={() => handleOpenProfile(user.id)}
+                                    className="flex items-center gap-4 text-left w-full"
+                                    title="Ouvrir la fiche client"
+                                >
+                                    <div className="relative w-10 h-10 rounded-full overflow-hidden bg-gray-50 border border-gray-100 flex items-center justify-center shadow-sm shrink-0">
+                                        {user.image ? (
+                                            <img src={user.image} alt={user.firstName ?? ''} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User size={18} className="text-gray-400" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col">
                                         <span className="text-sm font-bold text-gray-800 group-hover:text-[#28a745] transition-colors">
                                             {user.firstName} {user.lastName}
                                         </span>
-                                    <span className="text-xs text-gray-400 font-medium">{user.email}</span>
-                                </div>
+                                        <span className="text-xs text-gray-400 font-medium">{user.email}</span>
+                                    </div>
+                                </button>
                             </td>
 
                             <td className="p-5">
@@ -169,6 +211,9 @@ export default function UsersTable({ users }: UsersTableProps) {
                                     {openMenuId === user.id && (
                                         <div ref={menuRef} className="absolute right-5 mt-1 w-44 bg-white border border-gray-100 rounded-2xl shadow-xl z-50 py-2 divide-y divide-gray-50 animate-in fade-in slide-in-from-top-2 duration-150">
                                             <div className="py-1">
+                                                <button onClick={() => handleOpenProfile(user.id)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-[#28a745] transition-colors">
+                                                    <IdCard size={14} className="text-gray-400" /> Fiche client 360°
+                                                </button>
                                                 <button onClick={() => handleOpenEditModal(user)} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-gray-700 hover:bg-gray-50 hover:text-[#28a745] transition-colors">
                                                     <Edit2 size={14} className="text-gray-400" /> Modifier
                                                 </button>
@@ -200,8 +245,8 @@ export default function UsersTable({ users }: UsersTableProps) {
                             <X size={18} />
                         </button>
 
-                        <h3 className="text-xl font-bold text-[#2c3e50] mb-2">Modifier l'utilisateur</h3>
-                        <p className="text-xs text-gray-400 font-medium mb-6">Mettez à jour les privilèges ou coordonnées d'inscription.</p>
+                        <h3 className="text-xl font-bold text-[#2c3e50] mb-2">Modifier l&apos;utilisateur</h3>
+                        <p className="text-xs text-gray-400 font-medium mb-6">Mettez à jour les privilèges ou coordonnées d&apos;inscription.</p>
 
                         <form onSubmit={handleConfirmEdit} className="space-y-5">
                             <div className="grid grid-cols-2 gap-4">
@@ -229,6 +274,49 @@ export default function UsersTable({ users }: UsersTableProps) {
                                 </select>
                             </div>
 
+                            {/* Réinitialisation du mot de passe — repliée : on ne la propose
+                                que si l'administrateur la demande explicitement. */}
+                            <div className="border-t border-gray-50 pt-4">
+                                {!showPasswordBlock ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPasswordBlock(true)}
+                                        className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-[#28a745] transition-colors"
+                                    >
+                                        <KeyRound size={13} /> Réinitialiser le mot de passe
+                                    </button>
+                                ) : (
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                                            Nouveau mot de passe
+                                        </label>
+                                        <div className="relative">
+                                            <input
+                                                type={showPassword ? 'text' : 'password'}
+                                                value={newPassword}
+                                                onChange={(e) => setNewPassword(e.target.value)}
+                                                placeholder="Laissez vide pour ne rien changer"
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 pr-11 text-xs font-semibold focus:bg-white focus:ring-1 focus:ring-[#28a745] focus:border-[#28a745] outline-none transition-all"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword((v) => !v)}
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-[#2c3e50] rounded-lg transition-colors"
+                                            >
+                                                {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                                            </button>
+                                        </div>
+                                        <PasswordStrength password={newPassword} />
+                                    </div>
+                                )}
+                            </div>
+
+                            {editError && (
+                                <p className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                                    {editError}
+                                </p>
+                            )}
+
                             <div className="flex gap-3 pt-4">
                                 <button type="button" onClick={() => setEditingUser(null)} className="flex-1 bg-gray-50 border border-gray-100 hover:bg-gray-100 text-gray-600 rounded-xl py-3 text-xs font-bold transition-all">
                                     Annuler
@@ -240,6 +328,11 @@ export default function UsersTable({ users }: UsersTableProps) {
                         </form>
                     </div>
                 </div>
+            )}
+
+            {/* --- FICHE CLIENT 360° --- */}
+            {viewingUserId !== null && (
+                <CustomerDetailModal userId={viewingUserId} onClose={() => setViewingUserId(null)} />
             )}
         </div>
     );

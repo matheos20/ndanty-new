@@ -4,6 +4,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { deductStock } from './index';
+import { logPaymentEvent, outcomeToEventType, type PaymentEventSource } from './events';
 import type { GatewayOutcome, PaymentMethodKey } from './types';
 
 export interface FinalizeResult {
@@ -23,6 +24,8 @@ export async function finalizePayment(
     method: PaymentMethodKey,
     outcome: GatewayOutcome,
     extraMetadata?: Record<string, any>,
+    /** Origine de l'application du résultat, tracée dans le journal des transactions. */
+    source: PaymentEventSource = 'SYSTEM',
 ): Promise<FinalizeResult> {
     return prisma.$transaction(async (tx) => {
         const payment = await tx.payment.findUnique({
@@ -30,6 +33,22 @@ export async function finalizePayment(
             include: { order: { include: { orderitem: true } } },
         });
         if (!payment) throw new Error('Transaction de paiement introuvable.');
+
+        // Journalise l'étape dans la MÊME transaction : le journal ne peut pas
+        // affirmer un encaissement qui aurait été annulé par un rollback.
+        const journal = (status: string, message?: string) =>
+            logPaymentEvent(
+                {
+                    paymentId,
+                    type: outcomeToEventType(outcome),
+                    method,
+                    status,
+                    source,
+                    message,
+                    payload: extraMetadata ?? null,
+                },
+                tx,
+            );
 
         // Idempotence : si déjà encaissé, on ne rejoue rien.
         if (payment.status === 'PAID') {
@@ -58,6 +77,7 @@ export async function finalizePayment(
                 where: { id: payment.orderId },
                 data: { paymentStatus: 'PAID', paymentMethod: method, isReadByManager: false },
             });
+            await journal('PAID', outcome.message ?? 'Paiement encaissé.');
             return { paymentStatus: 'PAID', orderPaymentStatus: 'PAID' };
         }
 
@@ -71,6 +91,7 @@ export async function finalizePayment(
                 where: { id: payment.orderId },
                 data: { paymentStatus: 'A_LA_LIVRAISON', paymentMethod: 'COD', isReadByManager: false },
             });
+            await journal('PENDING', outcome.message ?? 'Règlement à la livraison confirmé.');
             return { paymentStatus: 'PENDING', orderPaymentStatus: 'A_LA_LIVRAISON' };
         }
 
@@ -80,6 +101,7 @@ export async function finalizePayment(
                 data: { status: 'CANCELLED', providerRef, errorMessage: outcome.message },
             });
             await tx.order.update({ where: { id: payment.orderId }, data: { paymentStatus: 'PENDING' } });
+            await journal('CANCELLED', outcome.message);
             return { paymentStatus: 'CANCELLED', orderPaymentStatus: 'PENDING' };
         }
 
@@ -90,6 +112,7 @@ export async function finalizePayment(
             data: { status: 'FAILED', providerRef, errorMessage: message },
         });
         await tx.order.update({ where: { id: payment.orderId }, data: { paymentStatus: 'FAILED', paymentMethod: method } });
+        await journal('FAILED', message);
         return { paymentStatus: 'FAILED', orderPaymentStatus: 'FAILED' };
     });
 }

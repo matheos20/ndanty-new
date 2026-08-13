@@ -51,9 +51,9 @@ export default async function QuotesPage({ searchParams }: PageProps) {
     });
 
     return (
-        <div className="space-y-6 p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
+        <div className="space-y-6 p-5 sm:p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
             {/* HEADER : Stats à droite */}
-            <div className="flex justify-between items-center bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 bg-white p-5 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <div>
                     <h2 className="text-2xl font-bold text-[#2c3e50]">Gestion des Devis</h2>
                     <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-semibold">Flux de travail Ndanty</p>
@@ -90,7 +90,7 @@ export default async function QuotesPage({ searchParams }: PageProps) {
             ) : (
                 <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full min-w-[720px] text-left border-collapse">
                             <thead className="bg-gray-50/50 border-b border-gray-100">
                             <tr>
                                 <th className="px-6 py-5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Aperçu</th>

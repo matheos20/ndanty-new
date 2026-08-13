@@ -54,13 +54,13 @@ export default function SurMesurePage() {
             <div className="max-w-4xl mx-auto">
                 <div className="text-center mb-12">
                     <span className="text-[#28a745] font-bold text-sm uppercase tracking-[0.2em]">Service Premium</span>
-                    <h1 className="text-4xl md:text-5xl font-black text-[#2c3e50] mt-2 mb-4">Projet Sur Mesure</h1>
+                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-[#2c3e50] mt-2 mb-4">Projet Sur Mesure</h1>
                     <p className="text-gray-500 max-w-lg mx-auto">
                         Décrivez votre projet et téléchargez vos plans. Nous vous enverrons un devis précis sous 24h.
                     </p>
                 </div>
 
-                <form action={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-gray-200/50 border border-gray-50">
+                <form action={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-5 sm:p-8 md:p-12 rounded-[3rem] shadow-2xl shadow-gray-200/50 border border-gray-50">
 
                     {/* Colonne Gauche : Infos Perso */}
                     <div className="space-y-6">

@@ -6,6 +6,7 @@ import { registerUser } from '@/app/actions/auth';
 import { signIn } from 'next-auth/react';
 import PasswordField from './PasswordField';
 import PasswordStrength from './PasswordStrength';
+import GoogleButton from './GoogleButton';
 
 const inputCls = "w-full px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-sm text-[#2c3e50] outline-none focus:border-[#28a745] transition-all";
 
@@ -74,15 +75,16 @@ export default function RegisterForm({ onSuccess }: Props) {
     };
 
     return (
-        <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
+        <div className="space-y-4">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {fieldErrors.general && (
-                <div className="col-span-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
+                <div className="sm:col-span-2 p-3 bg-red-50 border border-red-100 rounded-xl text-red-600 text-xs font-bold text-center">
                     {fieldErrors.general}
                 </div>
             )}
 
             {/* Photo (optionnelle) — bouton personnalisé pour éviter le débordement de l'input natif */}
-            <div className="col-span-2 flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <div className="sm:col-span-2 flex items-center gap-3 p-3 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                 <div className="relative w-14 h-14 rounded-full bg-white border-2 border-white shadow-sm flex items-center justify-center overflow-hidden shrink-0">
                     {imagePreview ? <img src={imagePreview} alt="" className="w-full h-full object-cover" /> : <Camera className="text-gray-300" size={22} />}
                 </div>
@@ -113,7 +115,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 <input name="lastName" required type="text" className={inputCls} placeholder="Dupont" />
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-[#28a745] uppercase tracking-widest ml-1">Email</label>
                 <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300" size={15} />
@@ -121,7 +123,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 </div>
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-[#28a745] uppercase tracking-widest ml-1">Adresse de livraison</label>
                 <div className="relative">
                     <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300" size={15} />
@@ -129,7 +131,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 </div>
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-[#28a745] uppercase tracking-widest ml-1">Pays</label>
                 <div className="relative">
                     <Globe className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-300" size={15} />
@@ -137,7 +139,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 </div>
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-[#28a745] uppercase tracking-widest ml-1">Mot de passe</label>
                 <PasswordField
                     name="password"
@@ -152,7 +154,7 @@ export default function RegisterForm({ onSuccess }: Props) {
                 <PasswordStrength password={password} />
             </div>
 
-            <div className="col-span-2 space-y-1">
+            <div className="sm:col-span-2 space-y-1">
                 <label className="text-[10px] font-bold text-[#28a745] uppercase tracking-widest ml-1">Confirmer le mot de passe</label>
                 <PasswordField
                     name="confirmPassword"
@@ -164,9 +166,13 @@ export default function RegisterForm({ onSuccess }: Props) {
                 {fieldErrors.confirmPassword && <p className="text-[9px] text-red-500 font-bold ml-1">{fieldErrors.confirmPassword}</p>}
             </div>
 
-            <button disabled={loading} className="col-span-2 bg-[#28a745] text-white py-4 rounded-xl font-bold hover:bg-[#218838] transition-all mt-2 flex justify-center items-center gap-2 shadow-lg shadow-[#28a745]/20 disabled:opacity-75">
+            <button disabled={loading} className="sm:col-span-2 bg-[#28a745] text-white py-4 rounded-xl font-bold hover:bg-[#218838] transition-all mt-2 flex justify-center items-center gap-2 shadow-lg shadow-[#28a745]/20 disabled:opacity-75">
                 {loading ? <Loader2 className="animate-spin" size={20} /> : "Créer mon compte"}
             </button>
         </form>
+
+        {/* Inscription via Google (se masque si non configuré) */}
+        <GoogleButton callbackUrl="/dashboard" />
+        </div>
     );
 }

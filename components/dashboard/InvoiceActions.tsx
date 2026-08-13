@@ -19,7 +19,7 @@ export default function InvoiceActions({ autoPrint = false }: { autoPrint?: bool
     }, [autoPrint]);
 
     return (
-        <div className="flex items-center justify-between gap-3 mb-6 print:hidden">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 print:hidden">
             <Link
                 href="/dashboard?tab=orders"
                 className="inline-flex items-center gap-2 text-xs font-bold text-gray-500 hover:text-[#28a745] transition-colors"
@@ -28,7 +28,7 @@ export default function InvoiceActions({ autoPrint = false }: { autoPrint?: bool
             </Link>
             <button
                 onClick={() => window.print()}
-                className="inline-flex items-center gap-2 bg-[#28a745] hover:bg-black text-white text-xs font-bold uppercase tracking-widest px-5 py-3 rounded-full transition-all"
+                className="w-full sm:w-auto justify-center inline-flex items-center gap-2 bg-[#28a745] hover:bg-black text-white text-xs font-bold uppercase tracking-widest px-5 py-3 rounded-full transition-all"
             >
                 <Printer size={14} /> Télécharger / Imprimer (PDF)
             </button>

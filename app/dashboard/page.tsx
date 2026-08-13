@@ -136,6 +136,43 @@ export default async function ClientDashboardPage({ searchParams }: DashboardPro
             {/* 📦 ZONE DE CONTENU PRINCIPALE */}
             <div className="flex-1 p-6 md:p-12 overflow-y-auto max-w-5xl mx-auto w-full">
 
+                {/* 📱 NAVIGATION MOBILE
+                    La barre latérale est masquée sous md : sans ces onglets, un client
+                    sur téléphone resterait bloqué sur « Mon Profil » sans jamais pouvoir
+                    atteindre ses commandes ni ses devis. */}
+                <nav className="md:hidden -mx-6 px-6 mb-8 sticky top-0 z-20 bg-[#FDFDFD]/95 backdrop-blur-sm py-3 border-b border-gray-100">
+                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+                        {sidebarItems.map((item) => {
+                            const Icon = item.icon;
+                            const isActive = activeTab === item.id;
+                            return (
+                                <Link
+                                    key={item.id}
+                                    href={`/dashboard?tab=${item.id}`}
+                                    aria-current={isActive ? "page" : undefined}
+                                    className={`flex items-center gap-2 px-4 py-2.5 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0 transition-all border ${
+                                        isActive
+                                            ? "bg-[#28a745] text-white border-[#28a745] shadow-sm shadow-[#28a745]/20"
+                                            : "bg-white text-gray-500 border-gray-100 hover:border-[#28a745]/40 hover:text-[#28a745]"
+                                    }`}
+                                >
+                                    <Icon size={14} className={isActive ? "text-white" : "text-gray-400"} />
+                                    {item.label}
+                                    {item.count !== undefined && item.count > 0 && (
+                                        <span
+                                            className={`text-[9px] font-black px-1.5 py-0.5 rounded-full tabular-nums ${
+                                                isActive ? "bg-white/25 text-white" : "bg-gray-100 text-gray-500"
+                                            }`}
+                                        >
+                                            {item.count}
+                                        </span>
+                                    )}
+                                </Link>
+                            );
+                        })}
+                    </div>
+                </nav>
+
                 {/* 1. ONGLET PROFILE : Modification du Compte */}
                 {activeTab === "profile" && (
                     <div className="space-y-8 animate-in fade-in duration-300">

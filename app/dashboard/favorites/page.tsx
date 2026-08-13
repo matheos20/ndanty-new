@@ -23,7 +23,7 @@ export default function FavoritesPage() {
         <div className="min-h-screen bg-[#FDFDFD] flex flex-col items-center pt-4 pb-12 font-sans">
 
             {/* 📦 LE CADRE CENTRAL (Même structure w-[80%] que le catalogue Shop) */}
-            <div className="w-[80%] bg-white shadow-sm border-x border-gray-100 flex flex-col p-12 min-h-[75vh]">
+            <div className="w-[94%] lg:w-[80%] bg-white shadow-sm border-x border-gray-100 flex flex-col p-5 sm:p-8 lg:p-12 min-h-[75vh]">
 
                 {/* FIL D'ARIANE / RETOUR */}
                 <div className="mb-6">
@@ -39,7 +39,7 @@ export default function FavoritesPage() {
                 {/* EN-TÊTE */}
                 <div className="border-b border-gray-100 pb-6 mb-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div className="space-y-1">
-                        <h1 className="text-3xl font-normal text-[#2c3e50] italic font-serif flex items-center gap-3">
+                        <h1 className="text-2xl sm:text-3xl font-normal text-[#2c3e50] italic font-serif flex items-center gap-3">
                             <Heart className="text-[#28a745] fill-[#28a745]" size={28} />
                             Mes Coups de Cœur
                         </h1>

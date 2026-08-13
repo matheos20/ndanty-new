@@ -80,7 +80,7 @@ export default function ProfileForm({ initialData, clientEmail }: ProfileFormPro
         <form onSubmit={handleSubmit} className="space-y-6">
 
             {/* SECTION 1 : INFORMATIONS PERSONNELLES */}
-            <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm space-y-6">
+            <div className="bg-white border border-gray-100 rounded-[2rem] p-5 sm:p-8 shadow-sm space-y-6">
                 <span className="block text-[10px] font-black uppercase tracking-widest text-[#28a745]">Informations Générales</span>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -117,7 +117,7 @@ export default function ProfileForm({ initialData, clientEmail }: ProfileFormPro
             </div>
 
             {/* SECTION 2 : SÉCURITÉ DU COMPTE (MOT DE PASSE) */}
-            <div className="bg-white border border-gray-100 rounded-[2rem] p-8 shadow-sm space-y-6">
+            <div className="bg-white border border-gray-100 rounded-[2rem] p-5 sm:p-8 shadow-sm space-y-6">
                 <div>
                     <span className="block text-[10px] font-black uppercase tracking-widest text-amber-500">Sécurité du compte</span>
                     <p className="text-[11px] text-gray-400 mt-0.5">Laissez ces champs vides si vous ne souhaitez pas modifier votre mot de passe.</p>
@@ -151,7 +151,7 @@ export default function ProfileForm({ initialData, clientEmail }: ProfileFormPro
 
             {/* BOUTON UNIQUE DE SAUVEGARDE GLOBALE */}
             <div className="flex justify-end">
-                <button type="submit" className="bg-[#28a745] hover:bg-[#218838] text-white px-8 py-4 rounded-xl text-xs font-black shadow-lg shadow-[#28a745]/10 transition-all cursor-pointer">
+                <button type="submit" className="w-full sm:w-auto bg-[#28a745] hover:bg-[#218838] text-white px-8 py-4 rounded-xl text-xs font-black shadow-lg shadow-[#28a745]/10 transition-all cursor-pointer">
                     Sauvegarder l'ensemble du profil
                 </button>
             </div>

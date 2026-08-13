@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Star, MessageSquare, Send, Loader2, User } from 'lucide-react';
+import { Star, StarHalf, MessageSquare, Send, Loader2, User, Clock, ShieldCheck } from 'lucide-react';
 import EmojiPicker from '@/components/EmojiPicker';
 
 interface ReviewWithUser {
@@ -12,6 +12,10 @@ interface ReviewWithUser {
     createdAt: string;
     adminReply: string | null;
     adminReplyAt: string | null;
+    /** PENDING | APPROVED | REJECTED — les avis non publiés ne sont renvoyés qu'à leur auteur. */
+    status: string;
+    /** Vrai si l'avis appartient au visiteur connecté. */
+    isMine?: boolean;
     user: {
         firstName: string | null;
         lastName: string | null;
@@ -21,10 +25,13 @@ interface ReviewWithUser {
 
 interface ProductReviewsProps {
     productId: number;
-    currentUserId?: number | null; // Passer l'ID si l'utilisateur est connecté via ta session (ex: NextAuth ou cookie)
+    /** Moyenne des avis publiés, calculée côté serveur. `null` = aucun avis. */
+    average?: number | null;
+    /** Nombre d'avis publiés ayant servi à la moyenne. */
+    reviewCount?: number;
 }
 
-export default function ProductReviews({ productId, currentUserId }: ProductReviewsProps) {
+export default function ProductReviews({ productId, average = null, reviewCount = 0 }: ProductReviewsProps) {
     const [reviews, setReviews] = useState<ReviewWithUser[]>([]);
     const [rating, setRating] = useState<number>(5);
     const [hoverRating, setHoverRating] = useState<number | null>(null);
@@ -32,6 +39,7 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
     const [isLoading, setIsLoading] = useState(true);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
     // Insère un emoji à la position du curseur dans le commentaire
@@ -73,16 +81,14 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
 
         setIsSubmitting(true);
         setError(null);
+        setNotice(null);
 
         try {
+            // L'auteur est identifié par la session côté serveur : on n'envoie plus d'userId.
             const res = await fetch(`/api/shop/${productId}/reviews`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    rating,
-                    comment,
-                    userId: currentUserId || 1 // Valeur de secours ou de test si pas encore connecté
-                })
+                body: JSON.stringify({ rating, comment })
             });
 
             const data = await res.json();
@@ -94,6 +100,7 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
             // Réinitialiser le formulaire et recharger la liste
             setComment('');
             setRating(5);
+            setNotice(data.message || 'Merci ! Votre avis sera publié après validation.');
             fetchReviews();
         } catch (err: unknown) {
             if (err instanceof Error) {
@@ -107,13 +114,36 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
     };
 
     return (
-        <div className="mt-16 pt-12 border-t border-gray-100 max-w-4xl mx-auto w-full">
-            <h3 className="text-2xl font-normal text-[#2c3e50] italic font-serif mb-8 flex items-center gap-3">
-                <MessageSquare className="text-[#28a745]" size={22} />
-                Témoignages & Avis Clients
-            </h3>
+        <div id="avis" className="mt-16 pt-12 border-t border-gray-100 max-w-4xl mx-auto w-full scroll-mt-28">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <h3 className="text-2xl font-normal text-[#2c3e50] italic font-serif flex items-center gap-3">
+                    <MessageSquare className="text-[#28a745]" size={22} />
+                    Témoignages & Avis Clients
+                </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-12 items-start">
+                {/* Synthèse : la note affichée partout sur la boutique, et son assise réelle. */}
+                {average !== null && reviewCount > 0 && (
+                    <div className="flex items-center gap-3 bg-gray-50 border border-gray-100 rounded-2xl px-4 py-2.5 w-max">
+                        <span className="text-2xl font-black text-[#2c3e50] tabular-nums leading-none font-sans">
+                            {average.toFixed(1)}
+                        </span>
+                        <div className="space-y-1">
+                            <span className="flex items-center gap-0.5">
+                                {[1, 2, 3, 4, 5].map((star) => {
+                                    if (star <= average) return <Star key={star} size={12} className="fill-[#f39c12] text-[#f39c12]" />;
+                                    if (star - 0.5 <= average) return <StarHalf key={star} size={12} className="fill-[#f39c12] text-[#f39c12]" />;
+                                    return <Star key={star} size={12} className="text-gray-200 fill-gray-100" />;
+                                })}
+                            </span>
+                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider font-sans">
+                                sur {reviewCount} avis publié{reviewCount > 1 ? 's' : ''}
+                            </span>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 items-start">
 
                 {/* ✍️ COLONNE GAUCHE : FORMULAIRE DE SAISIE */}
                 <div className="md:col-span-1 bg-gray-50 border border-gray-100 p-6 rounded-2xl shadow-sm">
@@ -172,6 +202,19 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
 
                         {error && <p className="text-xs text-red-500 font-medium font-sans">{error}</p>}
 
+                        {/* Confirmation de dépôt : on annonce clairement la modération,
+                            sinon le client croit son avis perdu en ne le voyant pas s'afficher. */}
+                        {notice && (
+                            <div className="flex items-start gap-2 bg-[#28a745]/5 border border-[#28a745]/20 rounded-xl px-3 py-2.5">
+                                <ShieldCheck size={14} className="text-[#28a745] shrink-0 mt-0.5" />
+                                <p className="text-[11px] text-[#28a745] font-semibold font-sans leading-relaxed">{notice}</p>
+                            </div>
+                        )}
+
+                        <p className="text-[10px] text-gray-400 font-sans leading-relaxed">
+                            Chaque témoignage est relu par l&apos;équipe Ndanty avant sa mise en ligne.
+                        </p>
+
                         {/* Bouton de soumission vert Ndanty */}
                         <button
                             type="submit"
@@ -183,7 +226,7 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
                             ) : (
                                 <>
                                     <Send size={12} />
-                                    Publier l'avis
+                                    Envoyer mon avis
                                 </>
                             )}
                         </button>
@@ -199,13 +242,18 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
                     ) : reviews.length === 0 ? (
                         <div className="text-center py-12 border border-dashed border-gray-100 rounded-2xl bg-white">
                             <p className="text-gray-400 text-sm font-serif italic">
-                                Aucun avis n'a encore été laissé pour ce meuble. Soyez le premier !
+                                Aucun avis n&apos;a encore été laissé pour ce meuble. Soyez le premier !
                             </p>
                         </div>
                     ) : (
                         <div className="divide-y divide-gray-50 max-h-[450px] overflow-y-auto pr-2 space-y-4">
                             {reviews.map((rev) => (
-                                <div key={rev.id} className="pt-4 first:pt-0 flex gap-4 items-start animate-in fade-in duration-200">
+                                <div
+                                    key={rev.id}
+                                    className={`pt-4 first:pt-0 flex gap-4 items-start animate-in fade-in duration-200 ${
+                                        rev.status !== 'APPROVED' ? 'bg-amber-50/40 border border-amber-100 rounded-2xl p-4' : ''
+                                    }`}
+                                >
                                     {/* Avatar temporaire ou utilisateur */}
                                     <div className="p-2 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 shrink-0">
                                         <User size={18} />
@@ -227,6 +275,18 @@ export default function ProductReviews({ productId, currentUserId }: ProductRevi
                                                 })}
                                             </span>
                                         </div>
+
+                                        {/* Statut de modération — visible uniquement par l'auteur de l'avis */}
+                                        {rev.status === 'PENDING' && (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-[10px] font-bold font-sans">
+                                                <Clock size={10} /> En attente de validation — visible par vous seul
+                                            </span>
+                                        )}
+                                        {rev.status === 'REJECTED' && (
+                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 text-red-600 text-[10px] font-bold font-sans">
+                                                Avis non retenu par la modération
+                                            </span>
+                                        )}
 
                                         {/* Étoiles fixes de l'avis */}
                                         <div className="flex items-center gap-0.5">

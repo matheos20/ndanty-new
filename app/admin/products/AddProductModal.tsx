@@ -1,10 +1,11 @@
 // app/admin/products/AddProductModal.tsx
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { X, Check, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { createProductAction } from './actions';
-import { PRODUCT_CATEGORIES } from './categories'; // ✨ Importation de notre dictionnaire
+import { PRODUCT_CATEGORIES } from './categories'; // ✨ Repli si la base est indisponible
+import { getCategoryDictionaryAction } from '@/app/admin/categories/actions';
 
 interface AddProductModalProps {
     isOpen: boolean;
@@ -17,6 +18,16 @@ export default function AddProductModal({ isOpen, onClose }: AddProductModalProp
 
     // Etats pour gérer le filtrage dynamique des catégories
     const [selectedCategory, setSelectedCategory] = useState<string>("");
+    // Catégories pilotées par le back-office (base) — repli sur le dictionnaire statique.
+    const [categories, setCategories] = useState<Record<string, string[]>>(PRODUCT_CATEGORIES);
+
+    // À l'ouverture, on récupère l'arborescence à jour depuis la base.
+    useEffect(() => {
+        if (!isOpen) return;
+        getCategoryDictionaryAction()
+            .then((dict) => { if (dict && Object.keys(dict).length) setCategories(dict); })
+            .catch(() => { /* on garde le repli statique */ });
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
@@ -93,7 +104,7 @@ export default function AddProductModal({ isOpen, onClose }: AddProductModalProp
                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-semibold focus:bg-white focus:ring-1 focus:ring-[#28a745] focus:border-[#28a745] outline-none transition-all appearance-none cursor-pointer"
                             >
                                 <option value="">Choisir...</option>
-                                {Object.keys(PRODUCT_CATEGORIES).map(cat => (
+                                {Object.keys(categories).map(cat => (
                                     <option key={cat} value={cat}>{cat}</option>
                                 ))}
                             </select>
@@ -109,7 +120,7 @@ export default function AddProductModal({ isOpen, onClose }: AddProductModalProp
                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-xs font-semibold focus:bg-white focus:ring-1 focus:ring-[#28a745] focus:border-[#28a745] outline-none transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <option value="">Choisir...</option>
-                                {selectedCategory && PRODUCT_CATEGORIES[selectedCategory].map(sub => (
+                                {selectedCategory && (categories[selectedCategory] || []).map(sub => (
                                     <option key={sub} value={sub}>{sub}</option>
                                 ))}
                             </select>

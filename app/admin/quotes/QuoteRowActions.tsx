@@ -122,7 +122,7 @@ export default function QuoteRowActions({ quote }: QuoteRowActionsProps) {
             {/* --- MODALE D'ÉDITION DU DEVIS AVEC IMAGE --- */}
             {isEditing && (
                 <div className="fixed inset-0 bg-[#2c3e50]/40 backdrop-blur-sm flex items-center justify-center z-50 p-4 text-left overflow-y-auto">
-                    <div className="bg-white rounded-[2rem] border border-gray-100 w-full max-w-lg p-8 shadow-2xl relative my-8 animate-in zoom-in-95 duration-150">
+                    <div className="bg-white rounded-[2rem] border border-gray-100 w-full max-w-lg p-6 sm:p-8 shadow-2xl relative my-8 animate-in zoom-in-95 duration-150">
                         <button type="button" onClick={() => setIsEditing(false)} className="absolute right-6 top-6 p-2 text-gray-400 hover:bg-gray-50 rounded-full transition-all">
                             <X size={18} />
                         </button>

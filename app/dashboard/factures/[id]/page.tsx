@@ -63,7 +63,7 @@ export default async function InvoicePage({
                 <InvoiceActions autoPrint={print === "1"} />
 
                 {/* Feuille A4 */}
-                <div className="invoice-sheet bg-white rounded-2xl shadow-sm border border-gray-100 p-10 print:shadow-none print:border-0 print:rounded-none print:p-0">
+                <div className="invoice-sheet bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-8 lg:p-10 print:shadow-none print:border-0 print:rounded-none print:p-0">
                     {/* En-tête */}
                     <div className="flex justify-between items-start border-b-2 border-[#28a745] pb-6 mb-8">
                         <div>
@@ -87,7 +87,7 @@ export default async function InvoicePage({
                     </div>
 
                     {/* Coordonnées client */}
-                    <div className="grid grid-cols-2 gap-6 mb-8 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 text-sm">
                         <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Facturé à</p>
                             <p className="font-bold text-[#2c3e50]">{order.customerName}</p>
@@ -102,7 +102,8 @@ export default async function InvoicePage({
                     </div>
 
                     {/* Tableau des articles */}
-                    <table className="w-full text-sm mb-6">
+                    <div className="overflow-x-auto -mx-5 px-5 sm:mx-0 sm:px-0 print:overflow-visible">
+                    <table className="w-full min-w-[420px] text-sm mb-6">
                         <thead>
                             <tr className="border-b border-gray-200 text-left text-[10px] uppercase tracking-widest text-gray-400">
                                 <th className="py-2">Article</th>
@@ -122,6 +123,7 @@ export default async function InvoicePage({
                             ))}
                         </tbody>
                     </table>
+                    </div>
 
                     {/* Totaux */}
                     <div className="flex justify-end">

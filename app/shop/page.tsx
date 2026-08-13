@@ -1,6 +1,7 @@
 // app/shop/page.tsx
 import { prisma } from "@/lib/prisma";
 import ShopProductCard from "@/components/shop/ShopProductCard";
+import { getRatingSummaries, EMPTY_RATING } from "@/lib/ratings";
 import { Layers } from "lucide-react";
 import Link from "next/link";
 // Footer fourni globalement par LayoutShell (évite le doublon)
@@ -59,15 +60,19 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
         },
     });
 
+    // 5. Notes réelles des produits affichés (moyenne + nombre d'avis publiés),
+    //    en une seule requête groupée plutôt qu'une par carte.
+    const ratings = await getRatingSummaries(filteredProducts.map((p) => p.id));
+
     return (
         /* Le fond de la page (extérieur du cadre) */
         <div className="min-h-screen bg-[#FDFDFD] flex flex-col items-center pt-4 pb-12 font-sans">
 
             {/* 📦 LE CADRE CENTRAL */}
-            <div className="w-[80%] bg-white shadow-sm border-x border-gray-100 flex flex-col p-12">
+            <div className="w-[94%] lg:w-[80%] bg-white shadow-sm border-x border-gray-100 flex flex-col p-5 sm:p-8 lg:p-12">
 
                 {/* EN-TÊTE DE LA BOUTIQUE */}
-                <div className="mb-12 text-center space-y-3">
+                <div className="mb-8 sm:mb-12 text-center space-y-3">
                     <h1 className="text-3xl font-normal text-[#2c3e50] sm:text-4xl italic font-serif">
                         {query ? "Résultats de recherche" : "Notre Catalogue Exclusif"}
                     </h1>
@@ -85,7 +90,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                 </div>
 
                 {/* GRILLE PRINCIPALE */}
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 lg:gap-12 items-start">
 
                     {/* 🧭 BARRE LATÉRALE : LES RAYONS */}
                     <aside className="lg:col-span-1 bg-white space-y-6">
@@ -174,23 +179,28 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
                             </div>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                                {filteredProducts.map((product) => (
-                                    <ShopProductCard
-                                        key={product.id}
-                                        product={{
-                                            id: product.id,
-                                            name: product.name,
-                                            description: product.description,
-                                            price: product.price,
-                                            category: product.category,
-                                            subcategory: product.subcategory,
-                                            stock: product.stock,
-                                            imageUrl: product.imageUrl,
-                                            // Force la conversion de l'objet Decimal Prisma en vrai nombre JavaScript
-                                            rating: product.rating ? Number(product.rating) : 4.5
-                                        }}
-                                    />
-                                ))}
+                                {filteredProducts.map((product) => {
+                                    const rating = ratings.get(product.id) ?? EMPTY_RATING;
+
+                                    return (
+                                        <ShopProductCard
+                                            key={product.id}
+                                            product={{
+                                                id: product.id,
+                                                name: product.name,
+                                                description: product.description,
+                                                price: product.price,
+                                                category: product.category,
+                                                subcategory: product.subcategory,
+                                                stock: product.stock,
+                                                imageUrl: product.imageUrl,
+                                                // Note issue des avis publiés : `null` si le meuble n'en a aucun.
+                                                rating: rating.average,
+                                                reviewCount: rating.count,
+                                            }}
+                                        />
+                                    );
+                                })}
                             </div>
                         )}
                     </main>

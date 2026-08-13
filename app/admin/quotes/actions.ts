@@ -8,6 +8,7 @@ import { resend } from "@/lib/resend";
 import { ProposalQuoteEmail } from "@/emails/ProposalQuoteEmail";
 import { randomUUID } from "crypto";
 import { ensureAdmin } from "@/lib/guards";
+import { recordAudit } from "@/lib/admin/audit";
 
 /**
  * ACTION : Envoyer une proposition de prix au client pour un devis "sur mesure".
@@ -78,6 +79,17 @@ export async function sendQuoteProposal(
             emailWarning = "La proposition est enregistrée, mais l'email n'a pas pu être envoyé au client.";
         }
 
+        await recordAudit({
+            action: "quote.propose",
+            entity: "quote",
+            entityId: id,
+            label: `DEVIS #${id} — ${quote.customerName}`,
+            summary: `Proposition envoyée : ${price.toLocaleString('fr-FR')} Ar`
+                + (emailWarning ? " · email non parti" : ` · email adressé à ${quote.email}`),
+            metadata: { proposedPrice: price, previousPrice: quote.proposedPrice, emailSent: !emailWarning },
+            actorEmail: guard.session.user?.email,
+        });
+
         revalidatePath('/admin/quotes');
         return { success: true, warning: emailWarning, proposedPrice: updated.proposedPrice };
     } catch (error) {
@@ -94,8 +106,17 @@ export async function deleteQuoteAction(id: number) {
         const guard = await ensureAdmin();
         if (!guard.ok) return { success: false, error: guard.error };
 
-        await prisma.quote.delete({ // <-- Remplacé booking par quote
+        const deleted = await prisma.quote.delete({ // <-- Remplacé booking par quote
             where: { id }
+        });
+        await recordAudit({
+            action: "quote.delete",
+            entity: "quote",
+            entityId: id,
+            label: `DEVIS #${id} — ${deleted.customerName}`,
+            summary: `Demande sur mesure supprimée (${deleted.email})`,
+            metadata: { status: deleted.status, proposedPrice: deleted.proposedPrice },
+            actorEmail: guard.session.user?.email,
         });
         revalidatePath('/admin/quotes');
         return { success: true };
@@ -119,6 +140,15 @@ export async function updateQuoteAction(id: number, data: { customerName: string
                 details: data.details,
                 dimensions: data.dimensions,
             }
+        });
+        await recordAudit({
+            action: "quote.update",
+            entity: "quote",
+            entityId: id,
+            label: `DEVIS #${id} — ${data.customerName}`,
+            summary: "Fiche du devis modifiée (coordonnées ou description)",
+            metadata: { after: data },
+            actorEmail: guard.session.user?.email,
         });
         revalidatePath('/admin/quotes');
         return { success: true };

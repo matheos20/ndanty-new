@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { ensureAdmin } from "@/lib/guards";
 import { saveUploadedImage } from "@/lib/uploads";
+import { recordAudit, describeChange } from "@/lib/admin/audit";
 
 // ➕ ACTION DE CRÉATION
 export async function createProductAction(formData: FormData) {
@@ -34,8 +35,18 @@ export async function createProductAction(formData: FormData) {
             imageUrl = saved.url ?? null;
         }
 
-        await prisma.product.create({
+        const created = await prisma.product.create({
             data: { name, description, price, stock, category, subcategory, imageUrl, updatedAt: new Date() }
+        });
+
+        await recordAudit({
+            action: "product.create",
+            entity: "product",
+            entityId: created.id,
+            label: created.name,
+            summary: `Nouveau produit au catalogue — ${price.toLocaleString("fr-FR")} Ar, stock ${stock}, ${category} / ${subcategory}`,
+            metadata: { price, stock, category, subcategory, hasImage: Boolean(imageUrl) },
+            actorEmail: guard.session.user?.email,
         });
 
         revalidatePath("/admin/products");
@@ -67,6 +78,13 @@ export async function updateProductAction(productId: number, formData: FormData)
         const price = parseFloat(priceInput as string);
         const stock = parseInt(stockInput as string) || 0;
 
+        // Photographie de l'état AVANT modification : sans elle, le journal ne pourrait
+        // pas dire ce qui a changé, seulement qu'une modification a eu lieu.
+        const before = await prisma.product.findUnique({
+            where: { id: productId },
+            select: { name: true, price: true, stock: true, category: true, subcategory: true },
+        });
+
         const updateData: any = { name, description, price, stock, category, subcategory, updatedAt: new Date() };
 
         if (imageFile && imageFile.size > 0) {
@@ -78,6 +96,25 @@ export async function updateProductAction(productId: number, formData: FormData)
         await prisma.product.update({
             where: { id: productId },
             data: updateData
+        });
+
+        const changes = [
+            describeChange("Nom", before?.name, name),
+            describeChange("Prix", before?.price, price),
+            describeChange("Stock", before?.stock, stock),
+            describeChange("Catégorie", before?.category, category),
+            describeChange("Sous-catégorie", before?.subcategory, subcategory),
+            updateData.imageUrl ? "Photo remplacée" : null,
+        ].filter(Boolean) as string[];
+
+        await recordAudit({
+            action: "product.update",
+            entity: "product",
+            entityId: productId,
+            label: name,
+            summary: changes.length ? changes.join(" · ") : "Fiche enregistrée sans modification de valeur",
+            metadata: { before, after: { name, price, stock, category, subcategory } },
+            actorEmail: guard.session.user?.email,
         });
 
         revalidatePath("/admin/products");
@@ -94,7 +131,18 @@ export async function deleteProductAction(productId: number) {
         const guard = await ensureAdmin();
         if (!guard.ok) return { success: false, error: guard.error };
 
-        await prisma.product.delete({ where: { id: productId } });
+        const deleted = await prisma.product.delete({ where: { id: productId } });
+
+        await recordAudit({
+            action: "product.delete",
+            entity: "product",
+            entityId: productId,
+            label: deleted.name,
+            summary: `Produit retiré du catalogue (${deleted.price.toLocaleString("fr-FR")} Ar, stock restant ${deleted.stock})`,
+            metadata: { price: deleted.price, stock: deleted.stock, category: deleted.category, subcategory: deleted.subcategory },
+            actorEmail: guard.session.user?.email,
+        });
+
         revalidatePath("/admin/products");
         return { success: true };
     } catch (error) {

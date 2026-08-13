@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { resend } from "@/lib/resend";
 import { ClientQuoteEmail } from "@/emails/ClientQuoteEmail";
-import { AdminEmail } from "@/emails/AdminQuoteEmail";
+import { sendAdminQuoteAlert } from "@/lib/mailer";
 import { ensureAdmin } from "@/lib/guards";
 import { saveUploadedImage } from "@/lib/uploads";
 
@@ -56,17 +56,14 @@ export async function createQuote(formData: FormData) {
                     react: ClientQuoteEmail({ customerName: name }) as ReactElement,
                 });
 
-                // Email à l'Admin (Vous)
-                const adminDest = process.env.ADMIN_EMAIL || "votre-email@exemple.com";
-                await resend.emails.send({
-                    from: 'Système Ndanty <onboarding@resend.dev>',
-                    to: adminDest,
-                    subject: '🚨 Nouveau Devis à traiter !',
-                    react: AdminEmail({
-                        customerName: name,
-                        email: email,
-                        details: details
-                    }) as ReactElement,
+                // Alerte back-office (destinataire ADMIN_EMAIL, silencieuse si non configuré)
+                await sendAdminQuoteAlert({
+                    id: newQuote.id,
+                    customerName: name,
+                    email,
+                    phone,
+                    details,
+                    dimensions,
                 });
             } catch (mailError) {
                 // On log l'erreur mail mais on ne bloque pas le succès de la DB

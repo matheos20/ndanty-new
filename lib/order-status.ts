@@ -61,3 +61,16 @@ export function getStatusDef(raw: string | null | undefined): OrderStatusDef {
 
 /** Liste des clés valides (pour la validation côté API). */
 export const ORDER_STATUS_KEYS: OrderStatusKey[] = ORDER_STATUSES.map((s) => s.key);
+
+/**
+ * Toutes les valeurs susceptibles d'être STOCKÉES en base pour une clé canonique,
+ * héritage compris. Indispensable pour filtrer côté SQL : une commande créée avant
+ * l'unification porte encore « SHIPPED » ou « EXPÉDIÉE » et doit remonter dans le
+ * filtre « Expédiée ».
+ */
+export function statusDbValues(key: OrderStatusKey): string[] {
+    const legacy = Object.entries(LEGACY_MAP)
+        .filter(([, canonical]) => canonical === key)
+        .map(([raw]) => raw);
+    return [key, ...legacy];
+}

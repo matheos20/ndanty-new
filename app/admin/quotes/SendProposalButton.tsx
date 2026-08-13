@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Tag, X, Send, Loader2, CheckCircle2, AlertTriangle, Pencil } from 'lucide-react';
+import { useAdminNotifications } from '@/components/admin/AdminNotifications';
 import { sendQuoteProposal } from './actions';
 
 interface SendProposalButtonProps {
@@ -18,6 +19,8 @@ interface SendProposalButtonProps {
 
 export default function SendProposalButton({ quote }: SendProposalButtonProps) {
     const router = useRouter();
+    // L'envoi d'une proposition sort le devis de la file « en attente ».
+    const { refresh: refreshNotifications } = useAdminNotifications();
     const alreadyProposed = quote.proposedPrice != null;
 
     const [open, setOpen] = useState(false);
@@ -57,6 +60,7 @@ export default function SendProposalButton({ quote }: SendProposalButtonProps) {
         setDone(true);
         setWarning(res.warning || null);
         router.refresh(); // Rafraîchit la liste pour refléter le nouveau statut
+        refreshNotifications();
     };
 
     return (

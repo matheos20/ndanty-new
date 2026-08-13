@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Send, Loader2, Check, Trash2, MessageSquareReply } from 'lucide-react';
 import EmojiPicker from '@/components/EmojiPicker';
+import { useAdminNotifications } from '@/components/admin/AdminNotifications';
 import { replyToReview, deleteReviewReply } from './actions';
 
 interface ReviewReplyFormProps {
@@ -14,6 +15,8 @@ interface ReviewReplyFormProps {
 
 export default function ReviewReplyForm({ reviewId, existingReply, existingReplyAt }: ReviewReplyFormProps) {
     const router = useRouter();
+    // Publier ou retirer une réponse fait bouger la file « avis sans réponse ».
+    const { refresh: refreshNotifications } = useAdminNotifications();
     const [reply, setReply] = useState(existingReply || '');
     const [pending, setPending] = useState(false);
     const [saved, setSaved] = useState(false);
@@ -42,6 +45,7 @@ export default function ReviewReplyForm({ reviewId, existingReply, existingReply
             setSaved(true);
             setTimeout(() => setSaved(false), 2500);
             router.refresh();
+            refreshNotifications();
         } else {
             setError(res.error || 'Erreur');
         }
@@ -54,6 +58,7 @@ export default function ReviewReplyForm({ reviewId, existingReply, existingReply
         setReply('');
         setPending(false);
         router.refresh();
+        refreshNotifications();
     };
 
     return (

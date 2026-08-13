@@ -4,9 +4,10 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getGateway, isSupportedMethod, generatePaymentRef } from '@/lib/payments';
 import { finalizePayment } from '@/lib/payments/finalize';
+import { logPaymentEvent } from '@/lib/payments/events';
 import type { InitiateContext } from '@/lib/payments/types';
 import { enforceRateLimit } from '@/lib/rate-limit';
-import { sendOrderEmails } from '@/lib/mailer';
+import { sendOrderEmails, sendAdminOrderAlert } from '@/lib/mailer';
 
 function resolveAppUrl(request: Request): string {
     if (process.env.NEXT_PUBLIC_APP_URL) return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, '');
@@ -67,6 +68,16 @@ export async function POST(request: Request) {
         // Mémoriser le moyen choisi sur la commande dès l'initiation
         await prisma.order.update({ where: { id: order.id }, data: { paymentMethod: method } });
 
+        // Journal des transactions : trace de l'ouverture de la tentative (n° de tentative inclus).
+        await logPaymentEvent({
+            paymentId: payment.id,
+            type: 'INITIATED',
+            method,
+            status: 'PROCESSING',
+            message: `Tentative n°${payment.attempts} — ${order.totalAmount.toLocaleString('fr-FR')} Ar`,
+            payload: details || null,
+        });
+
         // 3. Appeler la passerelle (simulée)
         const gateway = getGateway(method);
         const ctx: InitiateContext = {
@@ -87,6 +98,8 @@ export async function POST(request: Request) {
             const result = await finalizePayment(payment.id, method, outcome, metadata);
             // Emails transactionnels (non bloquant) : confirmation + reçu si encaissé.
             await sendOrderEmails(order, method, outcome.kind === 'PAID');
+            // Alerte back-office : une commande vient d'être réglée.
+            await sendAdminOrderAlert(order, method, result.orderPaymentStatus);
             return NextResponse.json({
                 status: outcome.kind,
                 reference,
@@ -104,6 +117,14 @@ export async function POST(request: Request) {
                     metadata: metadata ? JSON.stringify(metadata) : undefined,
                 },
             });
+            await logPaymentEvent({
+                paymentId: payment.id,
+                type: 'REQUIRES_ACTION',
+                method,
+                status: 'REQUIRES_ACTION',
+                message: outcome.message,
+                payload: metadata ?? null,
+            });
             return NextResponse.json({
                 status: 'REQUIRES_ACTION',
                 action: outcome.action,
@@ -120,6 +141,14 @@ export async function POST(request: Request) {
                     providerRef: outcome.providerRef,
                     metadata: metadata ? JSON.stringify(metadata) : undefined,
                 },
+            });
+            await logPaymentEvent({
+                paymentId: payment.id,
+                type: 'REDIRECTED',
+                method,
+                status: 'PROCESSING',
+                message: outcome.message ?? 'Client redirigé vers la page d\'approbation de la passerelle.',
+                payload: { redirectUrl: outcome.redirectUrl },
             });
             return NextResponse.json({ status: 'REDIRECT', redirectUrl: outcome.redirectUrl, reference });
         }

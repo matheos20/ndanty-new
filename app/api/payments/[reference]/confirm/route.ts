@@ -4,9 +4,10 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getGateway, isSupportedMethod } from '@/lib/payments';
 import { finalizePayment } from '@/lib/payments/finalize';
+import { logPaymentEvent } from '@/lib/payments/events';
 import type { ConfirmContext } from '@/lib/payments/types';
 import { enforceRateLimit } from '@/lib/rate-limit';
-import { sendOrderEmails } from '@/lib/mailer';
+import { sendOrderEmails, sendAdminOrderAlert } from '@/lib/mailer';
 
 export async function POST(
     request: Request,
@@ -45,6 +46,16 @@ export async function POST(
             metadata: payment.metadata ? JSON.parse(payment.metadata) : {},
             input,
         };
+        // Journal : le client a soumis sa confirmation (OTP saisi, retour de redirection).
+        await logPaymentEvent({
+            paymentId: payment.id,
+            type: 'CONFIRMED',
+            method: payment.method,
+            status: payment.status,
+            message: 'Confirmation soumise par le client.',
+            payload: input, // maskPayload retire l'OTP avant écriture
+        });
+
         const { outcome, metadata } = await gateway.confirm(ctx);
 
         const result = await finalizePayment(payment.id, payment.method, outcome, metadata);
@@ -55,7 +66,10 @@ export async function POST(
                 where: { id: payment.orderId },
                 include: { orderitem: true },
             });
-            if (order) await sendOrderEmails(order, payment.method, true);
+            if (order) {
+                await sendOrderEmails(order, payment.method, true);
+                await sendAdminOrderAlert(order, payment.method, result.orderPaymentStatus);
+            }
         }
 
         return NextResponse.json({

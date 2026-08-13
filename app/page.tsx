@@ -43,26 +43,26 @@ export default async function Home({
 
     return (
         <div className="min-h-screen bg-[#FDFDFD] flex flex-col items-center" style={lucidaStyle}>
-            <div className="w-[80%] bg-white shadow-sm flex flex-col">
+            <div className="w-[94%] lg:w-[80%] bg-white shadow-sm flex flex-col">
 
                 {/* --- SECTION HERO --- */}
-                <section className="relative bg-[#2c3e50] py-32 px-12 overflow-hidden flex flex-col items-center text-center">
+                <section className="relative bg-[#2c3e50] py-20 sm:py-28 lg:py-32 px-6 sm:px-12 overflow-hidden flex flex-col items-center text-center">
                     <div className="absolute top-0 right-0 w-1/3 h-full bg-[#28a745] opacity-10 skew-x-12 translate-x-20"></div>
                     <div className="relative z-10 max-w-3xl">
-                        <h2 className="text-5xl text-white leading-tight mb-6">
+                        <h2 className="text-3xl sm:text-4xl lg:text-5xl text-white leading-tight mb-6">
                             Le Savoir-Faire <span className="text-[#28a745]">Ancestral</span>,<br /> Design Moderne.
                         </h2>
-                        <p className="text-gray-300 text-lg leading-relaxed mb-10 max-w-xl mx-auto">
+                        <p className="text-gray-300 text-base sm:text-lg leading-relaxed mb-10 max-w-xl mx-auto">
                             Découvrez notre collection exclusive de mobilier en bois noble, conçu pour durer et sublimer votre intérieur.
                         </p>
-                        <button className="bg-[#28a745] text-white px-12 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-[#2c3e50] transition-all duration-300 shadow-lg rounded-sm">
+                        <button className="bg-[#28a745] text-white px-8 sm:px-12 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-white hover:text-[#2c3e50] transition-all duration-300 shadow-lg rounded-sm">
                             Explorer le catalogue
                         </button>
                     </div>
                 </section>
 
                 {/* --- SECTION PRODUITS & FILTRES --- */}
-                <section className="flex flex-col md:flex-row p-12 gap-12 bg-white">
+                <section className="flex flex-col md:flex-row p-6 sm:p-12 gap-8 md:gap-12 bg-white">
 
                     {/* Menu Latéral "Rayons" Interactif */}
                     <aside className="w-full md:w-1/4">
@@ -154,9 +154,9 @@ export default async function Home({
                 </section>
 
                 {/* --- SECTION SERVICES --- */}
-                <section className="bg-[#fcfcfc] py-28 px-12 border-t border-gray-100">
-                    <div className="text-center mb-20">
-                        <h3 className="text-4xl text-[#2c3e50] mb-6" style={{ fontFamily: '"Lucida Handwriting", cursive' }}>
+                <section className="bg-[#fcfcfc] py-20 sm:py-28 px-6 sm:px-12 border-t border-gray-100">
+                    <div className="text-center mb-14 sm:mb-20">
+                        <h3 className="text-3xl sm:text-4xl text-[#2c3e50] mb-6" style={{ fontFamily: '"Lucida Handwriting", cursive' }}>
                             L'Excellence <span className="text-[#28a745]">Fanaka</span>
                         </h3>
                         <p className="text-gray-400 max-w-2xl mx-auto text-[10px] leading-loose uppercase tracking-[0.4em] font-bold">
@@ -199,7 +199,7 @@ export default async function Home({
 
 function ServiceCard({ icon, title, desc }: { icon: any, title: string, desc: string }) {
     return (
-        <div className="group relative bg-white p-10 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_80px_rgba(0,0,0,0.08)] transition-all duration-700 overflow-hidden border border-gray-50 flex flex-col items-start text-left">
+        <div className="group relative bg-white p-8 sm:p-10 rounded-3xl shadow-[0_15px_40px_rgba(0,0,0,0.02)] hover:shadow-[0_30px_80px_rgba(0,0,0,0.08)] transition-all duration-700 overflow-hidden border border-gray-50 flex flex-col items-start text-left">
             <div className="absolute -right-8 -top-8 w-36 h-36 border-[12px] border-gray-50 rounded-full group-hover:border-[#28a745]/10 group-hover:scale-125 transition-all duration-1000 pointer-events-none"></div>
             <div className="relative w-16 h-16 mb-10 flex items-center justify-center rounded-2xl bg-white shadow-sm border border-gray-100 text-[#28a745] group-hover:bg-[#28a745] group-hover:text-white group-hover:shadow-[0_15px_30px_rgba(40,167,69,0.3)] transition-all duration-500">
                 {icon}

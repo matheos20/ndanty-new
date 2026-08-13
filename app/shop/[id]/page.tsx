@@ -2,10 +2,11 @@
 import type { Metadata } from 'next';
 import { PrismaClient } from '@prisma/client';
 import { notFound } from 'next/navigation';
-import { ArrowLeft, ShieldCheck, Truck, Hammer, Layers, Tag } from 'lucide-react';
+import { ArrowLeft, ShieldCheck, Truck, Hammer, Layers, Tag, Star, StarHalf } from 'lucide-react';
 import Link from 'next/link';
 import ProductActions from './ProductActions';
 import ProductReviews from "@/components/shop/ProductReviews"; // 👈 Importation du bloc avis pro !
+import { getRatingSummary } from "@/lib/ratings";
 
 const prisma = new PrismaClient();
 
@@ -59,6 +60,9 @@ export default async function ProductDetailPage({ params }: PageProps) {
         notFound();
     }
 
+    // Note réelle du meuble : moyenne des avis publiés, `null` s'il n'y en a aucun.
+    const rating = await getRatingSummary(product.id);
+
     // Schema.org — données structurées produit (rich results Google)
     const productImage = product.imageUrl && product.imageUrl.startsWith("/") ? `${SITE_URL}${product.imageUrl}` : undefined;
     const jsonLd = {
@@ -69,7 +73,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
         image: productImage ? [productImage] : undefined,
         category: [product.category, product.subcategory].filter(Boolean).join(" / "),
         brand: { "@type": "Brand", name: "Ndanty" },
-        ...(product.rating ? { aggregateRating: { "@type": "AggregateRating", ratingValue: Number(product.rating), bestRating: 5, ratingCount: 1 } } : {}),
+        // AggregateRating n'est déclaré que s'il repose sur de vrais avis publiés :
+        // annoncer une note sans avis derrière expose à une pénalité Google et,
+        // surtout, ce serait faux.
+        ...(rating.average !== null && rating.count > 0
+            ? {
+                  aggregateRating: {
+                      "@type": "AggregateRating",
+                      ratingValue: rating.average,
+                      bestRating: 5,
+                      ratingCount: rating.count,
+                  },
+              }
+            : {}),
         offers: {
             "@type": "Offer",
             priceCurrency: "MGA",
@@ -133,6 +149,33 @@ export default async function ProductDetailPage({ params }: PageProps) {
                             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-[#1A1A1A] font-serif leading-tight">
                                 {product.name}
                             </h1>
+
+                            {/* Note issue des avis publiés — ou rien du tout s'il n'y en a pas encore */}
+                            {rating.average !== null ? (
+                                <a href="#avis" className="inline-flex items-center gap-2 group/note w-max">
+                                    <span className="flex items-center gap-0.5">
+                                        {[1, 2, 3, 4, 5].map((star) => {
+                                            if (star <= rating.average!) {
+                                                return <Star key={star} size={14} className="fill-[#f39c12] text-[#f39c12]" />;
+                                            }
+                                            if (star - 0.5 <= rating.average!) {
+                                                return <StarHalf key={star} size={14} className="fill-[#f39c12] text-[#f39c12]" />;
+                                            }
+                                            return <Star key={star} size={14} className="text-gray-200 fill-gray-100" />;
+                                        })}
+                                    </span>
+                                    <span className="text-sm font-black text-[#1A1A1A] tabular-nums">
+                                        {rating.average.toFixed(1)}
+                                    </span>
+                                    <span className="text-[11px] font-bold text-gray-400 underline underline-offset-2 group-hover/note:text-[#28a745] transition-colors">
+                                        {rating.count} avis client{rating.count > 1 ? "s" : ""}
+                                    </span>
+                                </a>
+                            ) : (
+                                <a href="#avis" className="inline-block text-[11px] font-bold text-gray-400 italic underline underline-offset-2 hover:text-[#28a745] transition-colors">
+                                    Aucun avis pour le moment — soyez le premier
+                                </a>
+                            )}
                         </div>
 
                         {/* Zone Prix & Devise Exclusive */}
@@ -215,7 +258,11 @@ export default async function ProductDetailPage({ params }: PageProps) {
                 </div>
 
                 {/* 🌟 3. SECTIONS TEMOIGNAGES ET AVIS CLIENTS (Intégration Pro) */}
-                <ProductReviews productId={product.id} currentUserId={null} />
+                <ProductReviews
+                    productId={product.id}
+                    average={rating.average}
+                    reviewCount={rating.count}
+                />
 
             </div>
         </div>

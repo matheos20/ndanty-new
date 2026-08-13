@@ -3,10 +3,13 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Trash2, Loader2 } from 'lucide-react';
+import { useAdminNotifications } from '@/components/admin/AdminNotifications';
 import { deleteReview } from './actions';
 
 export default function ReviewDeleteButton({ reviewId }: { reviewId: number }) {
     const router = useRouter();
+    // Supprimer un avis peut vider la file de modération : la pastille doit suivre.
+    const { refresh: refreshNotifications } = useAdminNotifications();
     const [pending, setPending] = useState(false);
 
     const handleDelete = async () => {
@@ -14,8 +17,12 @@ export default function ReviewDeleteButton({ reviewId }: { reviewId: number }) {
         setPending(true);
         const res = await deleteReview(reviewId);
         setPending(false);
-        if (res.success) router.refresh();
-        else alert(res.error);
+        if (res.success) {
+            router.refresh();
+            refreshNotifications();
+        } else {
+            alert(res.error);
+        }
     };
 
     return (

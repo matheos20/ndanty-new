@@ -31,8 +31,8 @@ export default function ForgotPasswordPage() {
     };
 
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
-            <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-50 p-10">
+        <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-4 sm:p-6">
+            <div className="w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl shadow-gray-200/50 border border-gray-50 p-6 sm:p-10">
                 <Link href="/auth-client" className="inline-flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-[#28a745] transition-colors mb-8">
                     <ArrowLeft size={14} /> Retour à la connexion
                 </Link>

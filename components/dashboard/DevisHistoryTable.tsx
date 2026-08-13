@@ -69,8 +69,8 @@ export default function DevisHistoryTable({ devisRequests }: DevisHistoryTablePr
     }
 
     return (
-        <div className="overflow-hidden border border-gray-100 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.01)]">
-            <table className="w-full text-left border-collapse bg-white text-sm">
+        <div className="overflow-x-auto border border-gray-100 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.01)]">
+            <table className="w-full min-w-[720px] text-left border-collapse bg-white text-sm">
                 <thead className="bg-gray-50 text-gray-400 text-xs uppercase font-bold tracking-wider border-b border-gray-100">
                 <tr>
                     <th className="p-4">N° Projet</th>

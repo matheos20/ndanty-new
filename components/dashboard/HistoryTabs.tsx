@@ -11,7 +11,7 @@ interface HistoryTabsProps {
 
 export default function HistoryTabs({ activeTab, clientEmail, ordersCount, devisCount }: HistoryTabsProps) {
     return (
-        <div className="flex border-b border-gray-100 mb-8 gap-4">
+        <div className="flex border-b border-gray-100 mb-8 gap-4 overflow-x-auto whitespace-nowrap">
             {/* Onglet Achats Boutique */}
             <Link
                 href={`/dashboard/history?tab=orders&email=${encodeURIComponent(clientEmail)}`}

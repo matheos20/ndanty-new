@@ -39,6 +39,12 @@ export async function PUT(request: Request) {
                 return NextResponse.json({ message: "Veuillez remplir l'ancien et le nouveau mot de passe." }, { status: 400 });
             }
 
+            // Compte Google (sans mot de passe local) : la modification par mot de passe
+            // n'a pas de sens tant qu'aucun mot de passe n'a été défini.
+            if (!currentUser.password) {
+                return NextResponse.json({ message: "Ce compte utilise la connexion Google et n'a pas de mot de passe local." }, { status: 400 });
+            }
+
             // Vérifier si l'ancien mot de passe saisi correspond à celui en BDD
             const isPasswordValid = await bcrypt.compare(oldPassword, currentUser.password);
             if (!isPasswordValid) {

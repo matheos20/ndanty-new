@@ -39,6 +39,9 @@ model order {
   paymentMethod   String?     // MONEGASY | VISA | MASTERCARD | PAYPAL | COD
   paymentRef      String?     @unique(map: "Order_paymentRef_key") // Jeton public de la page de paiement
   stockDeducted   Boolean     @default(false) // Garde-fou anti double-décrément
+  // --- Annulation / remboursement (back-office) ---
+  cancelReason    String?     @db.Text // Motif saisi par l'administrateur, repris dans l'email client
+  cancelledAt     DateTime?
   user            user?       @relation(fields: [userId], references: [id], map: "Order_userId_fkey")
   orderitem       orderitem[]
   payment         payment?
@@ -63,6 +66,60 @@ model payment {
   updatedAt    DateTime  @updatedAt
   paidAt       DateTime?
   order        order     @relation(fields: [orderId], references: [id], onDelete: Cascade, map: "Payment_orderId_fkey")
+  event        paymentevent[]
+}
+
+// --- Journal des transactions (Projet FANAKA) ---
+// Trace horodatée de CHAQUE étape d'une transaction : initiation, action requise,
+// redirection, encaissement, échec, annulation, et réception d'un webhook de test.
+// Sert de piste d'audit consultable depuis le back-office (/admin/payments).
+model paymentevent {
+  id         Int      @id @default(autoincrement())
+  paymentId  Int
+  /// INITIATED | REQUIRES_ACTION | REDIRECTED | CONFIRMED | PAID | FAILED | CANCELLED | WEBHOOK_RECEIVED | WEBHOOK_REJECTED
+  type       String
+  /// Source de l'événement : SYSTEM (flux applicatif) | WEBHOOK (rappel passerelle) | ADMIN (action back-office)
+  source     String   @default("SYSTEM")
+  /// Méthode concernée, dupliquée pour filtrer le journal sans jointure.
+  method     String
+  /// Statut de la transaction APRÈS application de l'événement.
+  status     String
+  message    String?  @db.Text
+  /// Charge utile JSON reçue ou émise (masquée : jamais de PAN complet ni de CVC).
+  payload    String?  @db.Text
+  createdAt  DateTime @default(now())
+  payment    payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade, map: "PaymentEvent_paymentId_fkey")
+
+  @@index([paymentId], map: "PaymentEvent_paymentId_fkey")
+  @@index([createdAt], map: "PaymentEvent_createdAt_idx")
+}
+
+// --- Journal d'audit du back-office (Traçabilité) ---
+// Trace horodatée de CHAQUE action d'administration ayant modifié la boutique :
+// qui, quoi, sur quel objet, et ce qui a changé. Écriture seule — le journal n'est
+// jamais modifié ni supprimé par l'application, c'est ce qui lui donne sa valeur.
+model auditlog {
+  id          Int      @id @default(autoincrement())
+  createdAt   DateTime @default(now())
+  /// E-mail de l'administrateur auteur de l'action (identité au moment des faits).
+  actorEmail  String
+  actorId     Int?
+  /// Clé canonique de l'action, ex. « product.delete », « order.status ».
+  action      String
+  /// Famille d'objet concernée : product | order | quote | review | user | category | payment
+  entity      String
+  /// Identifiant de l'objet touché (chaîne : certaines entités n'ont pas d'id numérique).
+  entityId    String?
+  /// Désignation lisible de la cible, ex. « Canapé Ambatolampy » ou « CMD #42 ».
+  label       String?  @db.Text
+  /// Résumé humain de ce qui a changé, affiché tel quel dans le journal.
+  summary     String?  @db.Text
+  /// Détail structuré (JSON) : valeurs avant/après, motif, options cochées…
+  metadata    String?  @db.Text
+
+  @@index([createdAt], map: "AuditLog_createdAt_idx")
+  @@index([entity], map: "AuditLog_entity_idx")
+  @@index([actorEmail], map: "AuditLog_actorEmail_idx")
 }
 
 model orderitem {
@@ -90,10 +147,33 @@ model product {
   stock       Int         @default(0)
   updatedAt   DateTime    @updatedAt
   subcategory String?
-  rating      Decimal?    @default(4.5) @db.Decimal(2, 1)
+  /// Moyenne des avis APPROUVÉS, recalculée par lib/ratings.ts. `null` = aucun avis publié.
+  /// Jamais saisie à la main : sans quoi la note affichée cesserait de refléter les avis.
+  rating      Decimal?    @db.Decimal(2, 1)
   favorite    favorite[]
   orderitem   orderitem[]
   review      review[]
+}
+
+// --- Taxonomie du catalogue (Priorité : CRUD complet produits ET catégories) ---
+// Les produits référencent la catégorie/sous-catégorie par leur nom (String).
+// Ces tables pilotent l'arborescence officielle depuis le back-office.
+model category {
+  id          Int           @id @default(autoincrement())
+  name        String        @unique(map: "Category_name_key")
+  createdAt   DateTime      @default(now())
+  subcategory subcategory[]
+}
+
+model subcategory {
+  id         Int      @id @default(autoincrement())
+  name       String
+  categoryId Int
+  createdAt  DateTime @default(now())
+  category   category @relation(fields: [categoryId], references: [id], onDelete: Cascade, map: "Subcategory_categoryId_fkey")
+
+  @@unique([categoryId, name], map: "Subcategory_categoryId_name_key")
+  @@index([categoryId], map: "Subcategory_categoryId_fkey")
 }
 
 model quote {
@@ -120,15 +200,26 @@ model user {
   firstName String?
   lastName  String?
   email     String     @unique(map: "User_email_key")
-  password  String
+  // Optionnel : les comptes créés via Google (OAuth) n'ont pas de mot de passe local.
+  password  String?
   image     String?    @db.LongText
+  // Fournisseur d'authentification : "credentials" (email/mot de passe) ou "google".
+  provider  String     @default("credentials")
   address   String?
   country   String?
   role      String     @default("USER")
   createdAt DateTime   @default(now())
-  // --- Préparation 2FA (Priorité 1 sécurité) : structure prête, activation ultérieure ---
+  // --- Double authentification TOTP (RFC 6238) ---
+  // Le secret n'est JAMAIS stocké en clair : il est chiffré (AES-256-GCM) par lib/two-factor.ts.
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String? @db.Text
+  /// Secret d'un appairage commencé mais pas encore confirmé par un premier code valide.
+  twoFactorPendingSecret String? @db.Text
+  /// Codes de secours à usage unique (JSON d'empreintes bcrypt) — jamais lisibles après génération.
+  twoFactorRecoveryCodes String? @db.Text
+  twoFactorEnabledAt     DateTime?
+  /// Dernier pas de temps TOTP consommé : interdit de rejouer deux fois le même code.
+  twoFactorLastStep      Int?
   // --- Réinitialisation de mot de passe (jeton haché + expiration) ---
   resetToken       String?   @db.Text
   resetTokenExpiry DateTime?
@@ -147,10 +238,18 @@ model review {
   adminReply   String?   @db.Text // Réponse publique de la boutique Ndanty
   adminReplyAt DateTime?
 
+  // --- Modération (file d'attente de validation) ---
+  // Un avis n'est JAMAIS public tant qu'un administrateur ne l'a pas approuvé.
+  status          String    @default("PENDING") // PENDING | APPROVED | REJECTED
+  moderatedAt     DateTime?
+  moderatedBy     String?   // E-mail de l'administrateur ayant tranché (traçabilité)
+  rejectionReason String?   @db.Text // Motif interne du refus
+
   // Relations conformes aux normes de ton schéma actuel
   product   product  @relation(fields: [productId], references: [id], onDelete: Cascade, map: "Review_productId_fkey")
   user      user     @relation(fields: [userId], references: [id], onDelete: Cascade, map: "Review_userId_fkey")
 
 @@index([productId], map: "Review_productId_fkey")
 @@index([userId], map: "Review_userId_fkey")
+@@index([status], map: "Review_status_idx")
 }

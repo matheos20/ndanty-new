@@ -158,7 +158,7 @@ export default function PaymentClient({ order }: { order: OrderData }) {
             <div className="max-w-5xl mx-auto">
 
                 {/* Fil d'ariane / retour */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
                     <Link href="/shop" className="inline-flex items-center gap-1.5 text-xs font-bold text-gray-400 hover:text-[#28a745] transition-colors">
                         <ChevronLeft size={15} /> Retour à la boutique
                     </Link>

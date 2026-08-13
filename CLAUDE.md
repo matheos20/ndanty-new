@@ -67,7 +67,7 @@ Le module de paiement doit intégrer 4 solutions distinctes dans un environnemen
 
 ### 🔴 Sécurité
 * **Contrôle d'accès des commandes :** Correction immédiate de la route `app/api/orders/[id]/route.ts`. Réactivation et sécurisation du contrôle d'accès administrateur sur la méthode `PATCH` pour empêcher les modifications anonymes ou non autorisées des statuts de commande.
-* **Authentification Admin Robuste :** Remplacement du mot de passe en clair du fichier `.env`. Migration vers une gestion stricte des comptes en base de données via le rôle `ADMIN` avec mot de passe haché (ex: bcrypt). Préparer la structure pour l'intégration future du 2FA.
+* **Authentification Admin Robuste :** Remplacement du mot de passe en clair du fichier `.env`. Migration vers une gestion stricte des comptes en base de données via le rôle `ADMIN` avec mot de passe haché (ex: bcrypt). ✅ **2FA (TOTP) opérationnelle** : écran d'activation `/admin/securite` (QR code + codes de secours), vérification du second facteur au login, secret chiffré AES-256-GCM (`lib/totp.ts`, `lib/two-factor.ts`).
 * **Server Actions & Anti-Spam :** Protection systématique de toutes les Server Actions sensibles (CRUD produits, devis, avis). Ajout d'un système de *rate-limiting* basique côté code sur les routes `/api/orders` et `/api/payments` pour contrer les spams de robots.
 
 ### 🔵 Dette Technique & Performance

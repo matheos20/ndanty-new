@@ -16,7 +16,10 @@ interface ShopProductCardProps {
         subcategory?: string | null;
         stock: number;
         imageUrl?: string | null;
-        rating?: number; // 👈 2. Ajout de la note dynamique optionnelle
+        /** Moyenne des avis PUBLIÉS. `null` = aucun avis : on ne fabrique pas de note. */
+        rating?: number | null;
+        /** Nombre d'avis publiés ayant servi à la moyenne. */
+        reviewCount?: number;
     };
 }
 
@@ -27,8 +30,10 @@ export default function ShopProductCard({ product }: ShopProductCardProps) {
     const isLiked = isFavorite(product.id);
     const isOutOfStock = product.stock === 0;
 
-    // 3. Note par défaut (4.5) si le produit n'a pas de note en BDD
-    const productRating = product.rating ?? 4.5;
+    // 3. Note affichée uniquement si de vrais avis la soutiennent. Afficher une note
+    //    par défaut identique sur tout le catalogue reviendrait à inventer un avis.
+    const reviewCount = product.reviewCount ?? 0;
+    const productRating = reviewCount > 0 ? product.rating ?? null : null;
 
     // 4. Fonction magique pour générer le tableau d'étoiles (pleines, demies, vides)
     const renderStars = (rating: number) => {
@@ -131,14 +136,25 @@ export default function ShopProductCard({ product }: ShopProductCardProps) {
                             </h3>
                         </Link>
 
-                        {/* 🌟 ZONE RATING DYNAMIQUE CORRIGÉE */}
-                        <div className="flex items-center gap-1">
-                            <div className="flex items-center gap-0.5">
-                                {renderStars(productRating)}
-                            </div>
-                            <span className="text-xs font-bold text-gray-400 ml-1 font-sans">
-                                {productRating.toFixed(1)}
-                            </span>
+                        {/* 🌟 NOTE RÉELLE — issue des seuls avis publiés */}
+                        <div className="flex items-center gap-1 min-h-[18px]">
+                            {productRating !== null ? (
+                                <>
+                                    <div className="flex items-center gap-0.5">
+                                        {renderStars(productRating)}
+                                    </div>
+                                    <span className="text-xs font-bold text-gray-500 ml-1 font-sans tabular-nums">
+                                        {productRating.toFixed(1)}
+                                    </span>
+                                    <span className="text-[10px] font-semibold text-gray-300 ml-0.5 font-sans">
+                                        ({reviewCount} avis)
+                                    </span>
+                                </>
+                            ) : (
+                                <span className="text-[10px] font-semibold text-gray-300 font-sans italic">
+                                    Pas encore d&apos;avis
+                                </span>
+                            )}
                         </div>
 
                         {/* DESCRIPTION */}

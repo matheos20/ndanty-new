@@ -45,9 +45,9 @@ export default async function AdminFavoritesPage() {
     ];
 
     return (
-        <div className="space-y-6 p-8 max-w-6xl mx-auto animate-in fade-in duration-300">
+        <div className="space-y-6 p-5 sm:p-8 max-w-6xl mx-auto animate-in fade-in duration-300">
             {/* Header + stats */}
-            <div className="bg-white p-8 rounded-3xl border border-gray-100 shadow-sm">
+            <div className="bg-white p-5 sm:p-8 rounded-3xl border border-gray-100 shadow-sm">
                 <h2 className="text-2xl font-bold text-[#2c3e50]">Produits Favoris</h2>
                 <p className="text-xs text-gray-400 mt-1 uppercase tracking-widest font-semibold">
                     Ce que vos clients aiment le plus
@@ -78,7 +78,7 @@ export default async function AdminFavoritesPage() {
             ) : (
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
+                        <table className="w-full min-w-[720px] text-left border-collapse">
                             <thead className="bg-gray-50/50 border-b border-gray-100">
                                 <tr>
                                     <th className="px-6 py-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">#</th>

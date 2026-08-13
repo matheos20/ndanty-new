@@ -1,5 +1,5 @@
 // app/layout.tsx  (Server Component — permet l'API metadata / SEO)
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "@/app/globals.css";
 import LayoutShell from "@/components/LayoutShell";
 
@@ -30,6 +30,12 @@ export const metadata: Metadata = {
         description: "Catalogue de meubles et commandes sur mesure à Madagascar.",
     },
     robots: { index: true, follow: true },
+};
+
+export const viewport: Viewport = {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

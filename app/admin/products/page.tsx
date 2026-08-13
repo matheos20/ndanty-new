@@ -5,7 +5,8 @@ import SearchBar from "@/app/admin/users/_components/search-bar"; // On réutili
 import Pagination from "@/components/admin/Pagination"; // On réutilise notre pagination générique !
 import ProductCard from "./ProductCard";
 import AddProductButton from "./AddProductButton";
-import AdminRatingInput from "@/components/admin/AdminRatingInput"; // 👈 Import du gestionnaire de note pro !
+import ProductRatingBadge from "@/components/admin/ProductRatingBadge";
+import { getRatingSummaries, EMPTY_RATING } from "@/lib/ratings";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -47,8 +48,11 @@ export default async function ProductsPage({ searchParams }: PageProps) {
         orderBy: { createdAt: 'desc' }
     });
 
+    // 5. Notes réelles des produits affichés, en une seule requête (moyenne + nombre d'avis).
+    const ratings = await getRatingSummaries(products.map((p) => p.id));
+
     return (
-        <div className="space-y-6 p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
+        <div className="space-y-6 p-5 sm:p-8 max-w-7xl mx-auto animate-in fade-in duration-300">
 
             {/* EN-TÊTE : Statistiques du catalogue */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
@@ -106,10 +110,12 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                     {/* 🌟 GRILLE DE PRODUITS PROFESSIONNELLE */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                         {products.map((product) => {
+                            const rating = ratings.get(product.id) ?? EMPTY_RATING;
+
                             // On crée un objet propre pour le Client Component en convertissant le Decimal de Prisma
                             const safeProduct = {
                                 ...product,
-                                rating: product.rating ? Number(product.rating) : 4.5
+                                rating: rating.average ?? undefined,
                             };
 
                             return (
@@ -117,11 +123,12 @@ export default async function ProductsPage({ searchParams }: PageProps) {
                                     {/* Affichage de la carte produit avec l'objet nettoyé */}
                                     <ProductCard product={safeProduct} />
 
-                                    {/* 🛠️ ZONE ADMIN INTERACTIVE POUR LE RATING */}
+                                    {/* ⭐ NOTE RÉELLE (lecture seule) — se pilote depuis la file de modération */}
                                     <div className="pt-2 border-t border-gray-50 flex justify-center">
-                                        <AdminRatingInput
-                                            productId={product.id}
-                                            initialRating={safeProduct.rating}
+                                        <ProductRatingBadge
+                                            average={rating.average}
+                                            count={rating.count}
+                                            productName={product.name}
                                         />
                                     </div>
                                 </div>

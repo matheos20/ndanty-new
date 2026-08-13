@@ -2,6 +2,7 @@
 import { useState } from 'react';
 // ON IMPORTE LA FONCTION DEPUIS ACTIONS, ON NE LA RÉÉCRIT PAS ICI
 import { updateQuoteStatus } from '@/app/actions';
+import { useAdminNotifications } from '@/components/admin/AdminNotifications';
 import { Loader2, ChevronDown } from 'lucide-react';
 
 const options = [
@@ -14,6 +15,8 @@ const options = [
 export default function StatusSelect({ quoteId, currentStatus }: { quoteId: number, currentStatus: string }) {
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState(currentStatus);
+    // Sortir un devis de « En attente » vide la file correspondante.
+    const { refresh: refreshNotifications } = useAdminNotifications();
 
     const handleChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newStatus = e.target.value;
@@ -23,6 +26,7 @@ export default function StatusSelect({ quoteId, currentStatus }: { quoteId: numb
             const result = await updateQuoteStatus(quoteId, newStatus);
             if (result.success) {
                 setStatus(newStatus);
+                refreshNotifications();
             }
         } catch (error) {
             alert("Erreur de mise à jour");
