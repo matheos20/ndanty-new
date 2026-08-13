@@ -129,6 +129,9 @@ model user {
   // --- Préparation 2FA (Priorité 1 sécurité) : structure prête, activation ultérieure ---
   twoFactorEnabled Boolean @default(false)
   twoFactorSecret  String? @db.Text
+  // --- Réinitialisation de mot de passe (jeton haché + expiration) ---
+  resetToken       String?   @db.Text
+  resetTokenExpiry DateTime?
   favorite  favorite[]
   order     order[]
   review      review[]

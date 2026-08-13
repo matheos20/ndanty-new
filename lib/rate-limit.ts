@@ -72,6 +72,30 @@ export function rateLimit(
 }
 
 /**
+ * Consulte l'état du compteur SANS l'incrémenter (utile pour bloquer une connexion
+ * avant même de vérifier le mot de passe).
+ */
+export function peekRateLimit(
+    key: string,
+    { name, limit, windowMs }: RateLimitOptions,
+    now: number = Date.now()
+): RateLimitResult {
+    const bucket = getStore(name).get(key);
+    if (!bucket || now >= bucket.resetAt) {
+        return { ok: true, remaining: limit, retryAfter: 0 };
+    }
+    if (bucket.count >= limit) {
+        return { ok: false, remaining: 0, retryAfter: Math.ceil((bucket.resetAt - now) / 1000) };
+    }
+    return { ok: true, remaining: limit - bucket.count, retryAfter: 0 };
+}
+
+/** Réinitialise le compteur d'une clé (ex : connexion réussie → on efface les échecs). */
+export function resetRateLimit(name: string, key: string): void {
+    getStore(name).delete(key);
+}
+
+/**
  * Applique le rate-limit à une requête et renvoie null si OK,
  * ou une Response 429 prête à renvoyer si la limite est dépassée.
  */

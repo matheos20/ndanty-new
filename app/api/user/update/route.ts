@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import bcrypt from "bcryptjs"; // Ou "bcrypt" selon ce que tu utilises pour l'inscription
+import { validatePassword } from "@/lib/password";
 
 export async function PUT(request: Request) {
     try {
@@ -44,8 +45,14 @@ export async function PUT(request: Request) {
                 return NextResponse.json({ message: "L'ancien mot de passe est incorrect." }, { status: 400 });
             }
 
+            // Politique de mot de passe (min 8 caractères, lettre + chiffre)
+            const pwCheck = validatePassword(newPassword);
+            if (!pwCheck.ok) {
+                return NextResponse.json({ message: pwCheck.error }, { status: 400 });
+            }
+
             // Hasher (crypter) le nouveau mot de passe avant de l'enregistrer
-            const hashedPassword = await bcrypt.hash(newPassword, 10);
+            const hashedPassword = await bcrypt.hash(newPassword, 12);
             updateData.password = hashedPassword;
         }
 
